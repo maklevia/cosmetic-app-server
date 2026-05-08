@@ -1,6 +1,10 @@
 # dependencies
 node_modules/
 
+#env files
 .env
 
+#files for gemini (delete later)
 db_cosmetics_app.drawio.png
+
+crud_cosmetics_app.pdf
