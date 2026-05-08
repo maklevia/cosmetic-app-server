@@ -1,0 +1,6 @@
+# dependencies
+node_modules/
+
+.env
+
+db_cosmetics_app.drawio.png
