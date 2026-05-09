@@ -24,22 +24,24 @@ export class User {
     @Column("text", { unique: true })
     email!: string;
 
-    @Column("text")
-    password_hash!: string;
+    @Column("text", { name: "password_hash" })
+    passwordHash!: string;
 
     @Column({
         type: "enum",
         enum: AppTheme,
-        default: AppTheme.LIGHT
+        default: AppTheme.LIGHT,
+        name: "app_theme"
     })
-    app_theme!: AppTheme;
+    appTheme!: AppTheme;
 
     @Column({
         type: "enum",
         enum: AppLang,
-        default: AppLang.EN
+        default: AppLang.EN,
+        name: "app_lang"
     })
-    app_lang!: AppLang;
+    appLang!: AppLang;
 
     @ManyToOne("Image", "users", { nullable: true })
     @JoinColumn({ name: "image_id" })

@@ -25,12 +25,16 @@ export class Product {
     @Column({
         type: "enum",
         enum: SourceStatus,
-        default: SourceStatus.PARSED
+        default: SourceStatus.PARSED,
+        name: "source_status"
     })
-    source_status!: SourceStatus;
+    sourceStatus!: SourceStatus;
 
-    @Column("numeric", { precision: 3, scale: 2, default: 0 })
-    average_score!: number;
+    @Column("numeric", { precision: 3, scale: 2, default: 0, name: "average_score" })
+    averageScore!: number;
+
+    @Column("int", { name: "image_id", nullable: true })
+    imageId!: number | null;
 
     @ManyToOne("Image", "products", { nullable: true })
     @JoinColumn({ name: "image_id" })

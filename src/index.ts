@@ -17,8 +17,16 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
+process.on('uncaughtException', (err) => {
+    console.error('CRITICAL: Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('CRITICAL: Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Middleware
 app.use(cors());
@@ -41,8 +49,8 @@ app.get('/health', (req, res) => {
 AppDataSource.initialize()
     .then(() => {
         console.log("Data Source has been initialized!");
-        app.listen(PORT, () => {
-            console.log(`Server is running on port ${PORT}`);
+        app.listen(Number(PORT), '0.0.0.0', () => {
+            console.log(`Server is running on http://0.0.0.0:${PORT}`);
         });
     })
     .catch((err) => {

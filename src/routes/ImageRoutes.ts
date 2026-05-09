@@ -10,7 +10,7 @@ const imageController = new ImageController();
 // Configure Multer
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const type = req.query["type"] === "profile" ? "profiles" : "products";
+        const type = (req.body?.type || req.query?.type) === "profile" ? "profiles" : "products";
         cb(null, `uploads/${type}`);
     },
     filename: (req, file, cb) => {

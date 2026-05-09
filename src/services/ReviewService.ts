@@ -10,7 +10,7 @@ export class ReviewService {
         return await this.reviewRepository.find({
             where: { product: { id: productId } },
             relations: ["user", "user.avatar"],
-            order: { created_at: "DESC" }
+            order: { createdAt: "DESC" }
         });
     }
 
@@ -34,8 +34,8 @@ export class ReviewService {
         
         if (!review) throw new Error("Review not found");
 
-        review.text_review = text;
-        review.score_review = score;
+        review.textReview = text;
+        review.scoreReview = score;
         await this.reviewRepository.save(review);
 
         await this.updateProductAverageScore(review.product.id);
@@ -59,14 +59,15 @@ export class ReviewService {
     private async updateProductAverageScore(productId: number) {
         const result = await this.reviewRepository
             .createQueryBuilder("review")
-            .select("AVG(review.score_review)", "avg")
-            .where("review.product_id = :productId", { productId })
+            .select("AVG(review.scoreReview)", "avg")
+            .where("review.productId = :productId", { productId })
             .getRawOne();
 
         const average = parseFloat(result.avg || "0");
-        
+
         await this.productRepository.update(productId, {
-            average_score: average
+            averageScore: average
         });
     }
+
 }

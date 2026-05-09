@@ -3,13 +3,16 @@ import { User } from "../entities/User.js";
 import { Product, SourceStatus } from "../entities/Product.js";
 import { CollectionItem } from "../entities/CollectionItem.js";
 import bcrypt from "bcrypt";
+import { ImageService } from "./ImageService.js";
+
+const imageService = new ImageService();
 
 export class UserService {
     private userRepository = AppDataSource.getRepository(User);
 
     async createUser(userData: Partial<User>) {
-        if (userData.password_hash) {
-            userData.password_hash = await bcrypt.hash(userData.password_hash, 10);
+        if (userData.passwordHash) {
+            userData.passwordHash = await bcrypt.hash(userData.passwordHash, 10);
         }
         const user = this.userRepository.create(userData);
         return await this.userRepository.save(user);
@@ -30,8 +33,8 @@ export class UserService {
     }
 
     async updateUser(id: number, updateData: Partial<User>) {
-        if (updateData.password_hash) {
-            updateData.password_hash = await bcrypt.hash(updateData.password_hash, 10);
+        if (updateData.passwordHash) {
+            updateData.passwordHash = await bcrypt.hash(updateData.passwordHash, 10);
         }
         await this.userRepository.update(id, updateData);
         return this.getUserById(id);
@@ -45,10 +48,12 @@ export class UserService {
     async deleteUser(id: number) {
         const user = await this.userRepository.findOne({
             where: { id },
-            relations: ["collectionItems", "collectionItems.product"]
+            relations: ["collectionItems", "collectionItems.product", "avatar", "collectionItems.product.image"]
         });
 
         if (!user) throw new Error("User not found");
+
+        const avatarId = user.avatar?.id;
 
         const productRepository = AppDataSource.getRepository(Product);
         const collectionRepository = AppDataSource.getRepository(CollectionItem);
@@ -56,15 +61,22 @@ export class UserService {
         // Identify unique products in the user's collection
         const productsToCheck = user.collectionItems
             .map(item => item.product)
-            .filter(product => product.source_status === SourceStatus.ADDED_MANUALLY);
+            .filter(product => product.sourceStatus === SourceStatus.ADDED_MANUALLY);
 
         // Remove duplicates from the list of products to check
         const uniqueProducts = Array.from(new Map(productsToCheck.map(p => [p.id, p])).values());
 
         // We must delete the user first (which cascades to collection items) 
-        // OR delete items first to allow checking for "other" users.
-        // Let's delete the user first.
         await this.userRepository.remove(user);
+
+        // Cleanup avatar if it exists
+        if (avatarId) {
+            try {
+                await imageService.deleteImage(avatarId);
+            } catch (e) {
+                console.error("Failed to delete user avatar file:", e);
+            }
+        }
 
         // Now check if those manual products are orphaned
         for (const product of uniqueProducts) {
@@ -73,7 +85,17 @@ export class UserService {
             });
 
             if (count === 0) {
+                const productImageId = product.image?.id;
                 await productRepository.delete(product.id);
+                
+                // If product had an image, delete it from storage
+                if (productImageId) {
+                    try {
+                        await imageService.deleteImage(productImageId);
+                    } catch (e) {
+                        console.error("Failed to delete manual product image file:", e);
+                    }
+                }
             }
         }
     }

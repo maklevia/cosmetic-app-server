@@ -25,7 +25,7 @@ export class ProductController {
                 return res.status(404).json({ message: "Product not found" });
             }
 
-            if (product.source_status === SourceStatus.ADDED_MANUALLY) {
+            if (product.sourceStatus === SourceStatus.ADDED_MANUALLY) {
                 const isOwner = product.collectionItems.some(ci => ci.userId === req.user?.id);
                 if (!isOwner) {
                     return res.status(404).json({ message: "Product not found" });
@@ -57,16 +57,19 @@ export class ProductController {
 
     async create(req: AuthRequest, res: Response) {
         try {
-            const { title, brand, description, imageId } = req.body;
+            const { title, brand, description } = req.body;
+            const imageId = req.body.imageId || req.body.image_id;
+            
             const product = await productService.createProduct({
                 title,
                 brand,
                 description,
-                source_status: SourceStatus.ADDED_MANUALLY,
+                sourceStatus: SourceStatus.ADDED_MANUALLY,
                 image: imageId ? { id: imageId } as any : null
             });
             res.status(201).json(product);
         } catch (error) {
+            console.error("Error creating product:", error);
             res.status(500).json({ message: "Error creating product", error });
         }
     }
@@ -74,9 +77,17 @@ export class ProductController {
     async update(req: AuthRequest, res: Response) {
         try {
             const id = parseInt((req.params["id"] as string) || "0");
-            const product = await productService.updateProduct(id, req.body);
+            const updateData = { ...req.body };
+            
+            if (updateData.image_id !== undefined) {
+                updateData.imageId = updateData.image_id;
+                delete updateData.image_id;
+            }
+
+            const product = await productService.updateProduct(id, updateData);
             res.json(product);
         } catch (error) {
+            console.error("Error updating product:", error);
             res.status(500).json({ message: "Error updating product", error });
         }
     }

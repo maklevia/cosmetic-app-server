@@ -13,33 +13,37 @@ export class CollectionItem {
     @PrimaryGeneratedColumn()
     id!: number;
 
-    @Column("text", { nullable: true })
-    user_added_title!: string | null;
+    @Column("text", { nullable: true, name: "user_added_title" })
+    userAddedTitle!: string | null;
 
-    @Column("text", { nullable: true })
-    user_added_description!: string | null;
+    @Column("text", { nullable: true, name: "user_added_description" })
+    userAddedDescription!: string | null;
 
-    @Column("date")
-    opened_date!: Date;
+    @Column("date", { nullable: true, name: "opened_date" })
+    openedDate!: Date | null;
 
-    @Column("int")
-    pao!: number;
+    @Column("int", { nullable: true })
+    pao!: number | null;
 
-    @Column("date")
-    actual_expiration_date!: Date;
+    @Column("date", { nullable: true, name: "actual_expiration_date" })
+    actualExpirationDate!: Date | null;
 
     @Column({
         type: "enum",
         enum: ItemStatus,
-        default: ItemStatus.ACTIVE
+        default: ItemStatus.ACTIVE,
+        name: "item_status"
     })
-    item_status!: ItemStatus;
+    itemStatus!: ItemStatus;
 
-    @Column({ name: "user_id" })
+    @Column("int", { name: "user_id" })
     userId!: number;
 
-    @Column({ name: "product_id" })
+    @Column("int", { name: "product_id" })
     productId!: number;
+
+    @Column("int", { name: "user_added_image_id", nullable: true })
+    userAddedImageId!: number | null;
 
     @ManyToOne("User", "collectionItems", { onDelete: 'CASCADE' })
     @JoinColumn({ name: "user_id" })

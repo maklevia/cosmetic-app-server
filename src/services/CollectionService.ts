@@ -1,6 +1,9 @@
 import { AppDataSource } from "../data-source.js";
 import { CollectionItem, ItemStatus } from "../entities/CollectionItem.js";
 import { Product, SourceStatus } from "../entities/Product.js";
+import { ImageService } from "./ImageService.js";
+
+const imageService = new ImageService();
 
 export class CollectionService {
     private collectionRepository = AppDataSource.getRepository(CollectionItem);
@@ -15,7 +18,7 @@ export class CollectionService {
         return await this.collectionRepository.find({
             where: { 
                 user: { id: userId },
-                item_status: status
+                itemStatus: status
             },
             relations: ["product", "product.image", "customImage"]
         });
@@ -26,10 +29,10 @@ export class CollectionService {
             .createQueryBuilder("item")
             .leftJoinAndSelect("item.product", "product")
             .leftJoinAndSelect("product.image", "image")
-            .where("item.user_id = :userId", { userId })
-            .andWhere("item.item_status = :active", { active: ItemStatus.ACTIVE })
-            .andWhere("item.actual_expiration_date >= CURRENT_DATE")
-            .orderBy("item.actual_expiration_date", "ASC")
+            .leftJoinAndSelect("item.customImage", "customImage")
+            .where("item.userId = :userId", { userId })
+            .andWhere("item.itemStatus = :active", { active: ItemStatus.ACTIVE })
+            .orderBy("item.openedDate", "ASC")
             .limit(5)
             .getMany();
     }
@@ -39,41 +42,61 @@ export class CollectionService {
             .createQueryBuilder("item")
             .leftJoinAndSelect("item.product", "product")
             .leftJoinAndSelect("product.image", "image")
-            .where("item.user_id = :userId", { userId })
-            .andWhere("(product.title ILIKE :query OR product.brand ILIKE :query OR item.user_added_title ILIKE :query)", { query: `%${query}%` })
+            .leftJoinAndSelect("item.customImage", "customImage")
+            .where("item.userId = :userId", { userId })
+            .andWhere("(product.title ILIKE :query OR product.brand ILIKE :query OR item.userAddedTitle ILIKE :query)", { query: `%${query}%` })
             .getMany();
     }
 
     async deleteItem(id: number) {
         const item = await this.collectionRepository.findOne({
             where: { id },
-            relations: ["product"]
+            relations: ["product", "product.image", "customImage"]
         });
 
         if (!item) throw new Error("Collection item not found");
 
         const product = item.product;
+        const customImageId = item.customImage?.id;
         
-        // Remove the item first
         await this.collectionRepository.remove(item);
 
-        // Conditional Product Deletion:
-        // If it's manually added, we should check if other users have it in their collection.
-        // As per user requirements: "when user deletes collection item, we also delete product if it's status is added_manually"
-        // To be safe, we check if ANY other collection item exists for this product.
-        if (product.source_status === SourceStatus.ADDED_MANUALLY) {
+        // 1. Cleanup customImage if it exists
+        if (customImageId) {
+            try {
+                await imageService.deleteImage(customImageId);
+            } catch (e) {
+                console.error("Failed to delete custom image file:", e);
+            }
+        }
+
+        // 2. If product is manual, check if it's now orphaned
+        if (product.sourceStatus === SourceStatus.ADDED_MANUALLY) {
             const otherItemsCount = await this.collectionRepository.count({
                 where: { product: { id: product.id } }
             });
 
             if (otherItemsCount === 0) {
+                const productImageId = product.image?.id;
                 await this.productRepository.delete(product.id);
+                
+                // If global product had an image, delete it
+                if (productImageId) {
+                    try {
+                        await imageService.deleteImage(productImageId);
+                    } catch (e) {
+                        console.error("Failed to delete orphaned manual product image file:", e);
+                    }
+                }
             }
         }
     }
 
     async updateItem(id: number, updateData: Partial<CollectionItem>) {
         await this.collectionRepository.update(id, updateData);
-        return await this.collectionRepository.findOne({ where: { id } });
+        return await this.collectionRepository.findOne({ 
+            where: { id },
+            relations: ["product", "product.image", "customImage"]
+        });
     }
 }

@@ -6,18 +6,36 @@ const collectionService = new CollectionService();
 export class CollectionController {
     async add(req: Request, res: Response) {
         try {
-            const { userId, productId, opened_date, pao, actual_expiration_date, user_added_title, user_added_description } = req.body;
+            const userId = (req as any).user.id;
+            const productId = req.body.productId || req.body.product_id;
+            const openedDateRaw = req.body.openedDate || req.body.opened_at || req.body.opened_date;
+            const pao = req.body.pao;
+            const { userAddedTitle, userAddedDescription, userAddedImageId } = req.body;
+            
+            console.log(`Adding product ${productId} to collection for user ${userId}`);
+
+            if (!productId) {
+                return res.status(400).json({ message: "Product ID is required" });
+            }
+
+            const openedDate = openedDateRaw ? new Date(openedDateRaw) : null;
+            const actualExpirationDate = req.body.actualExpirationDate || req.body.actual_expiration_date || req.body.expires_at 
+                ? new Date(req.body.actualExpirationDate || req.body.actual_expiration_date || req.body.expires_at) 
+                : null;
+
             const item = await collectionService.addItem({
                 user: { id: userId } as any,
                 product: { id: productId } as any,
-                opened_date: new Date(opened_date),
-                pao,
-                actual_expiration_date: new Date(actual_expiration_date),
-                user_added_title,
-                user_added_description
+                openedDate,
+                pao: pao ? parseInt(pao) : null,
+                actualExpirationDate,
+                userAddedTitle,
+                userAddedDescription,
+                customImage: userAddedImageId ? { id: userAddedImageId } as any : undefined
             });
             res.status(201).json(item);
         } catch (error) {
+            console.error("Error adding to collection:", error);
             res.status(500).json({ message: "Error adding item to collection", error });
         }
     }
@@ -58,9 +76,40 @@ export class CollectionController {
     async update(req: Request, res: Response) {
         try {
             const id = parseInt((req.params["id"] as string) || "0");
-            const item = await collectionService.updateItem(id, req.body);
+            const updateData: any = { ...req.body };
+            
+            // Map app fields to entity properties (handle both styles during transition)
+            if (updateData.user_added_image_id !== undefined) {
+                updateData.userAddedImageId = updateData.user_added_image_id;
+                delete updateData.user_added_image_id;
+            }
+
+            if (updateData.user_added_title !== undefined) {
+                updateData.userAddedTitle = updateData.user_added_title;
+                delete updateData.user_added_title;
+            }
+
+            if (updateData.user_added_description !== undefined) {
+                updateData.userAddedDescription = updateData.user_added_description;
+                delete updateData.user_added_description;
+            }
+
+            if (updateData.item_status !== undefined) {
+                updateData.itemStatus = updateData.item_status;
+                delete updateData.item_status;
+            }
+            
+            if (updateData.openedDate) {
+                updateData.openedDate = new Date(updateData.openedDate);
+            } else if (updateData.opened_date) {
+                updateData.openedDate = new Date(updateData.opened_date);
+                delete updateData.opened_date;
+            }
+
+            const item = await collectionService.updateItem(id, updateData);
             res.json(item);
         } catch (error) {
+            console.error("Error updating collection item:", error);
             res.status(500).json({ message: "Error updating collection item", error });
         }
     }

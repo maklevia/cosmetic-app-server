@@ -10,9 +10,9 @@ export class ProductService {
             .createQueryBuilder("product")
             .leftJoinAndSelect("product.image", "image")
             .leftJoin("product.collectionItems", "ci")
-            .where("product.source_status = :parsed", { parsed: SourceStatus.PARSED })
+            .where("product.sourceStatus = :parsed", { parsed: SourceStatus.PARSED })
             .orWhere(
-                "product.source_status = :manual AND ci.userId = :userId", 
+                "product.sourceStatus = :manual AND ci.userId = :userId", 
                 { manual: SourceStatus.ADDED_MANUALLY, userId }
             )
             .getMany();
@@ -35,7 +35,7 @@ export class ProductService {
             .leftJoin("product.collectionItems", "ci")
             .where("(product.title ILIKE :query OR product.brand ILIKE :query)", { query: `%${query}%` })
             .andWhere(
-                "(product.source_status = :parsed OR (product.source_status = :manual AND ci.userId = :userId))",
+                "(product.sourceStatus = :parsed OR (product.sourceStatus = :manual AND ci.userId = :userId))",
                 { 
                     parsed: SourceStatus.PARSED, 
                     manual: SourceStatus.ADDED_MANUALLY, 
@@ -56,7 +56,7 @@ export class ProductService {
         const product = await this.productRepository.findOne({ where: { id } });
         if (!product) throw new Error("Product not found");
         
-        if (product.source_status !== SourceStatus.ADDED_MANUALLY) {
+        if (product.sourceStatus !== SourceStatus.ADDED_MANUALLY) {
             throw new Error("Only manually added products can be updated");
         }
 
@@ -68,7 +68,7 @@ export class ProductService {
         const product = await this.productRepository.findOne({ where: { id } });
         if (!product) throw new Error("Product not found");
 
-        if (product.source_status !== SourceStatus.ADDED_MANUALLY) {
+        if (product.sourceStatus !== SourceStatus.ADDED_MANUALLY) {
             throw new Error("Only manually added products can be deleted");
         }
 

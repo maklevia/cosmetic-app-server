@@ -16,15 +16,20 @@ export class ReviewController {
 
     async create(req: Request, res: Response) {
         try {
-            const { text_review, score_review, userId, productId } = req.body;
+            const textReview = req.body.textReview || req.body.text_review;
+            const scoreReview = req.body.scoreReview || req.body.score_review;
+            const userId = req.body.userId;
+            const productId = req.body.productId;
+
             const review = await reviewService.createReview({
-                text_review,
-                score_review,
+                textReview,
+                scoreReview,
                 user: { id: userId } as any,
                 product: { id: productId } as any
             });
             res.status(201).json(review);
         } catch (error) {
+            console.error("Error creating review:", error);
             res.status(500).json({ message: "Error creating review", error });
         }
     }
@@ -32,10 +37,13 @@ export class ReviewController {
     async update(req: Request, res: Response) {
         try {
             const id = parseInt((req.params["id"] as string) || "0");
-            const { text_review, score_review } = req.body;
-            const review = await reviewService.updateReview(id, text_review, score_review);
+            const textReview = req.body.textReview || req.body.text_review;
+            const scoreReview = req.body.scoreReview || req.body.score_review;
+            
+            const review = await reviewService.updateReview(id, textReview, scoreReview);
             res.json(review);
         } catch (error) {
+            console.error("Error updating review:", error);
             res.status(500).json({ message: "Error updating review", error });
         }
     }

@@ -15,6 +15,7 @@ router.put("/update-name", authMiddleware, userController.updateName);
 router.put("/update-theme", authMiddleware, userController.updateTheme);
 router.put("/update-language", authMiddleware, userController.updateLanguage);
 router.put("/update-avatar", authMiddleware, userController.updateAvatar);
+router.put("/change-password", authMiddleware, userController.changePassword);
 
 // Reset password (public flow for now, usually requires email verification)
 router.post("/reset-password", userController.resetPassword);
