@@ -98,6 +98,16 @@ export class CollectionController {
                 updateData.itemStatus = updateData.item_status;
                 delete updateData.item_status;
             }
+
+            if (updateData.archive_reason !== undefined) {
+                updateData.archiveReason = updateData.archive_reason;
+                delete updateData.archive_reason;
+            }
+
+            if (updateData.expiry_relation !== undefined) {
+                updateData.expiryRelation = updateData.expiry_relation;
+                delete updateData.expiry_relation;
+            }
             
             if (updateData.openedDate) {
                 updateData.openedDate = new Date(updateData.openedDate);

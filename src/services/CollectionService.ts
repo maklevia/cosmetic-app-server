@@ -20,7 +20,7 @@ export class CollectionService {
                 user: { id: userId },
                 itemStatus: status
             },
-            relations: ["product", "product.image", "customImage"]
+            relations: ["product", "product.image", "product.reviews", "customImage"]
         });
     }
 
@@ -29,11 +29,11 @@ export class CollectionService {
             .createQueryBuilder("item")
             .leftJoinAndSelect("item.product", "product")
             .leftJoinAndSelect("product.image", "image")
+            .leftJoinAndSelect("product.reviews", "reviews")
             .leftJoinAndSelect("item.customImage", "customImage")
             .where("item.userId = :userId", { userId })
             .andWhere("item.itemStatus = :active", { active: ItemStatus.ACTIVE })
             .orderBy("item.openedDate", "ASC")
-            .limit(5)
             .getMany();
     }
 
@@ -42,9 +42,11 @@ export class CollectionService {
             .createQueryBuilder("item")
             .leftJoinAndSelect("item.product", "product")
             .leftJoinAndSelect("product.image", "image")
+            .leftJoinAndSelect("product.reviews", "reviews")
             .leftJoinAndSelect("item.customImage", "customImage")
             .where("item.userId = :userId", { userId })
             .andWhere("(product.title ILIKE :query OR product.brand ILIKE :query OR item.userAddedTitle ILIKE :query)", { query: `%${query}%` })
+            .orderBy("item.itemStatus", "ASC") // 'active' comes before 'archived'
             .getMany();
     }
 
@@ -96,7 +98,7 @@ export class CollectionService {
         await this.collectionRepository.update(id, updateData);
         return await this.collectionRepository.findOne({ 
             where: { id },
-            relations: ["product", "product.image", "customImage"]
+            relations: ["product", "product.image", "product.reviews", "customImage"]
         });
     }
 }

@@ -16,10 +16,10 @@ export class ReviewController {
 
     async create(req: Request, res: Response) {
         try {
+            const userId = (req as any).user.id;
             const textReview = req.body.textReview || req.body.text_review;
             const scoreReview = req.body.scoreReview || req.body.score_review;
-            const userId = req.body.userId;
-            const productId = req.body.productId;
+            const productId = parseInt(req.body.productId || req.body.product_id);
 
             const review = await reviewService.createReview({
                 textReview,

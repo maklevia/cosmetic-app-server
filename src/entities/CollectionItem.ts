@@ -8,6 +8,17 @@ export enum ItemStatus {
     ARCHIVED = "archived"
 }
 
+export enum ArchiveReason {
+    EXPIRED = "expired",
+    RAN_OUT = "ran_out"
+}
+
+export enum ExpiryRelation {
+    IN_TIME = "in_time",
+    BEFORE = "before",
+    AFTER = "after"
+}
+
 @Entity("collection_items")
 export class CollectionItem {
     @PrimaryGeneratedColumn()
@@ -35,6 +46,22 @@ export class CollectionItem {
         name: "item_status"
     })
     itemStatus!: ItemStatus;
+
+    @Column({
+        type: "enum",
+        enum: ArchiveReason,
+        nullable: true,
+        name: "archive_reason"
+    })
+    archiveReason!: ArchiveReason | null;
+
+    @Column({
+        type: "enum",
+        enum: ExpiryRelation,
+        nullable: true,
+        name: "expiry_relation"
+    })
+    expiryRelation!: ExpiryRelation | null;
 
     @Column("int", { name: "user_id" })
     userId!: number;
