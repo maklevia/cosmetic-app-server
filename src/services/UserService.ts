@@ -46,56 +46,83 @@ export class UserService {
     }
 
     async deleteUser(id: number) {
+        // Load user with all relevant relations for cleanup
         const user = await this.userRepository.findOne({
             where: { id },
-            relations: ["collectionItems", "collectionItems.product", "avatar", "collectionItems.product.image"]
+            relations: [
+                "collectionItems", 
+                "collectionItems.product", 
+                "collectionItems.customImage",
+                "avatar", 
+                "collectionItems.product.image"
+            ]
         });
 
         if (!user) throw new Error("User not found");
 
         const avatarId = user.avatar?.id;
+        
+        // Collect custom image IDs from collection items before they are deleted
+        const customImageIds = user.collectionItems
+            .map(item => item.customImage?.id)
+            .filter((id): id is number => !!id);
 
         const productRepository = AppDataSource.getRepository(Product);
         const collectionRepository = AppDataSource.getRepository(CollectionItem);
 
-        // Identify unique products in the user's collection
+        // Identify products that might become orphaned (added manually by this user)
         const productsToCheck = user.collectionItems
             .map(item => item.product)
-            .filter(product => product.sourceStatus === SourceStatus.ADDED_MANUALLY);
+            .filter((p): p is Product => !!p && p.sourceStatus === SourceStatus.ADDED_MANUALLY);
 
-        // Remove duplicates from the list of products to check
+        // Unique products to check
         const uniqueProducts = Array.from(new Map(productsToCheck.map(p => [p.id, p])).values());
 
-        // We must delete the user first (which cascades to collection items) 
+        // 1. Delete the user (this cascades to delete collection_items)
         await this.userRepository.remove(user);
 
-        // Cleanup avatar if it exists
+        // 2. Cleanup User Avatar file and DB record
         if (avatarId) {
             try {
                 await imageService.deleteImage(avatarId);
             } catch (e) {
-                console.error("Failed to delete user avatar file:", e);
+                console.error(`Failed to cleanup user avatar ${avatarId}:`, e);
             }
         }
 
-        // Now check if those manual products are orphaned
-        for (const product of uniqueProducts) {
-            const count = await collectionRepository.count({
-                where: { product: { id: product.id } }
-            });
+        // 3. Cleanup Custom Images from deleted collection items
+        for (const imageId of customImageIds) {
+            try {
+                await imageService.deleteImage(imageId);
+            } catch (e) {
+                console.error(`Failed to cleanup custom image ${imageId}:`, e);
+            }
+        }
 
-            if (count === 0) {
-                const productImageId = product.image?.id;
-                await productRepository.delete(product.id);
-                
-                // If product had an image, delete it from storage
-                if (productImageId) {
-                    try {
-                        await imageService.deleteImage(productImageId);
-                    } catch (e) {
-                        console.error("Failed to delete manual product image file:", e);
+        // 4. Check and cleanup orphaned manual products
+        for (const product of uniqueProducts) {
+            try {
+                const count = await collectionRepository.count({
+                    where: { product: { id: product.id } }
+                });
+
+                if (count === 0) {
+                    const productImageId = product.image?.id;
+                    
+                    // Delete product record (this will also delete its reviews due to CASCADE)
+                    await productRepository.delete(product.id);
+                    
+                    // If product had an image, delete it
+                    if (productImageId) {
+                        try {
+                            await imageService.deleteImage(productImageId);
+                        } catch (e) {
+                            console.error(`Failed to cleanup product image ${productImageId}:`, e);
+                        }
                     }
                 }
+            } catch (e) {
+                console.error(`Error during orphaned product cleanup for ${product.id}:`, e);
             }
         }
     }
