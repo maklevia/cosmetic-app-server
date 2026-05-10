@@ -28,7 +28,7 @@ export class CollectionService {
         return await this.collectionRepository
             .createQueryBuilder("item")
             .leftJoinAndSelect("item.product", "product")
-            .leftJoinAndSelect("product.image", "image")
+            .leftJoinAndSelect("product.image", "productImage")
             .leftJoinAndSelect("product.reviews", "reviews")
             .leftJoinAndSelect("item.customImage", "customImage")
             .where("item.userId = :userId", { userId })
@@ -41,7 +41,7 @@ export class CollectionService {
         return await this.collectionRepository
             .createQueryBuilder("item")
             .leftJoinAndSelect("item.product", "product")
-            .leftJoinAndSelect("product.image", "image")
+            .leftJoinAndSelect("product.image", "productImage")
             .leftJoinAndSelect("product.reviews", "reviews")
             .leftJoinAndSelect("item.customImage", "customImage")
             .where("item.userId = :userId", { userId })

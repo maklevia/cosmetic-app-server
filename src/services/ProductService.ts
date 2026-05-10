@@ -8,7 +8,7 @@ export class ProductService {
         // Returns all global products OR manual products belonging to the user's collection
         return await this.productRepository
             .createQueryBuilder("product")
-            .leftJoinAndSelect("product.image", "image")
+            .leftJoinAndSelect("product.image", "productImage")
             .leftJoin("product.collectionItems", "ci")
             .where("product.sourceStatus = :parsed", { parsed: SourceStatus.PARSED })
             .orWhere(
@@ -45,6 +45,39 @@ export class ProductService {
             .getMany();
 
         return products;
+    }
+
+    async getTrendingProducts(limit: number = 10) {
+        // Trending Algorithm:
+        // Weight 1.0: Times added to collections
+        // Weight 0.5: Number of reviews
+        // Filter: Parsed products only
+        
+        // 1. Get ranked IDs using raw query to avoid complex grouping issues with relations
+        const trendingRaw = await this.productRepository
+            .createQueryBuilder("product")
+            .leftJoin("product.collectionItems", "ci")
+            .leftJoin("product.reviews", "r")
+            .select("product.id", "id")
+            .addSelect("COUNT(DISTINCT ci.id) * 1.0 + COUNT(DISTINCT r.id) * 0.5", "score")
+            .where("product.sourceStatus = :parsed", { parsed: SourceStatus.PARSED })
+            .groupBy("product.id")
+            .orderBy("score", "DESC")
+            .limit(limit)
+            .getRawMany();
+
+        const ids = trendingRaw.map(item => item.id);
+        if (ids.length === 0) return [];
+
+        // 2. Fetch full entities with images
+        const products = await this.productRepository
+            .createQueryBuilder("product")
+            .leftJoinAndSelect("product.image", "productImage")
+            .where("product.id IN (:...ids)", { ids })
+            .getMany();
+
+        // 3. Sort back to match the score order (since IN clause doesn't guarantee order)
+        return ids.map(id => products.find(p => p.id === id)).filter(p => !!p);
     }
 
     async createProduct(productData: Partial<Product>) {

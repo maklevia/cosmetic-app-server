@@ -9,6 +9,7 @@ const productController = new ProductController();
 router.use(authMiddleware);
 
 router.get("/", productController.getAll);
+router.get("/trending", productController.getTrending);
 router.post("/", productController.create);
 router.get("/search", productController.search);
 router.get("/:id", productController.getById);

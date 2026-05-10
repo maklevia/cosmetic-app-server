@@ -16,6 +16,16 @@ export class ProductController {
         }
     }
 
+    async getTrending(req: AuthRequest, res: Response) {
+        try {
+            const limit = parseInt(req.query["limit"] as string) || 10;
+            const products = await productService.getTrendingProducts(limit);
+            res.json(products);
+        } catch (error) {
+            res.status(500).json({ message: "Error fetching trending products", error });
+        }
+    }
+
     async getById(req: AuthRequest, res: Response) {
         try {
             const id = parseInt((req.params["id"] as string) || "0");
